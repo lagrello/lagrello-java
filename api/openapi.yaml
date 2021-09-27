@@ -1,0 +1,946 @@
+openapi: 3.0.3
+info:
+  contact:
+    email: support@lagrello.com
+    name: Lagrello support
+  description: API specification for Lagrello, a simple to use authentication service
+  license:
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  title: Lagrello API
+  version: 1.0.0
+servers:
+- url: https://api.lagrello.com
+security:
+- token: []
+tags:
+- description: Operations on users
+  name: users
+- description: Authentication actions for your users
+  name: auth
+- description: Operations on your tenant
+  name: tenants
+- description: Endpoints that are used by our website, but free to use for everyone
+  name: internal
+- description: Operations on tokens
+  name: tokens
+- description: Endpoints to generate images
+  name: images
+paths:
+  /v1/users:
+    post:
+      operationId: users/create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: Successfully created a new user
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: The access token used to access resource is wrong
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Returned when user already exist
+      summary: Creates a user in tenant, tenant is determined from the token
+      tags:
+      - users
+      x-contentType: application/json
+      x-accepts: application/json
+  /v1/users/{userId}:
+    delete:
+      operationId: users/delete
+      parameters:
+      - description: Id of the user you want to delete
+        in: path
+        name: userId
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Successfully deleted specified user
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: The access token used to access resource is wrong
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: user could not be found
+      summary: Deletes specified user
+      tags:
+      - users
+      x-accepts: application/json
+    get:
+      operationId: users/get
+      parameters:
+      - description: userId of user you want to fetch information about
+        in: path
+        name: userId
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: Returns user data for specified user
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: The access token used to access resource is wrong
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: user could not be found
+      summary: Returns specified user
+      tags:
+      - users
+      x-accepts: application/json
+    patch:
+      operationId: users/update
+      parameters:
+      - description: Id of the user you want to update
+        in: path
+        name: userId
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: Successfully updated specified user
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: The access token used to access resource is wrong
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: user could not be found
+      summary: Updates specified user
+      tags:
+      - users
+      x-contentType: application/json
+      x-accepts: application/json
+  /v1/users/{userId}/totp:
+    get:
+      operationId: users/totp/auth
+      parameters:
+      - description: Id of the user you want to verify TOTP code for
+        in: path
+        name: userId
+        required: true
+        schema:
+          type: string
+      - description: The totp token the user sent
+        in: query
+        name: payload
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: Success - Returns the user information if the totp token is
+            correct
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: End users token is wrong, DO NOT authenticate user
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: The access token used to access resource is wrong
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: user could not be found
+      summary: Verify users TOTP token
+      tags:
+      - auth
+      x-accepts: application/json
+    post:
+      description: When you want your users to be able to use TOTP authentication
+        you need to send enable set to true as payload to this endpoint. To turn off
+        TOTP set enable to false. When enabling you will recieve the secret key and
+        a QR code link. The QR code you need to show your user for them to scan.
+      operationId: users/totp/toggle
+      parameters:
+      - description: Id of the user you want to enable TOTP for
+        in: path
+        name: userId
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TotpEnableRequest'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TotpEnableResponse'
+          description: Will return user's secret key and a url where QR-code image
+            can be found
+        "204":
+          description: Success when disabling TOTP for user
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: The access token used to access resource is wrong
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: user could not be found
+      summary: Enables or disables Time-based One-Time Password authentication method
+        for specified user
+      tags:
+      - auth
+      x-contentType: application/json
+      x-accepts: application/json
+  /v1/users/email:
+    get:
+      operationId: users/email/auth
+      parameters:
+      - description: The magic link token the user sent
+        in: query
+        name: payload
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: Returns user data for authenticated user
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: End users token is wrong, DO NOT authenticate user
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: The access token used to access resource is wrong
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: user could not be found
+      summary: Gives back user data for the magic link token
+      tags:
+      - auth
+      x-accepts: application/json
+  /v1/users/{userId}/email:
+    post:
+      operationId: users/email/send
+      parameters:
+      - description: Id of the user you want to send magic link to
+        in: path
+        name: userId
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Email to user has been sent successfully.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: The payload of the request is not valid
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: The access token used to access resource is wrong
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: user could not be found
+      summary: This endpoint will be used when you want to send a magic login link
+        to specified user
+      tags:
+      - auth
+      x-accepts: application/json
+  /v1/tenant:
+    delete:
+      description: This endpoint will delete your tenant. Will send an email to the
+        admin email address of the tenant confirming that you want to delete your
+        tenant before deletion.
+      operationId: tenants/create
+      responses:
+        "204":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+          description: Sucess, will send verification email before deleting
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: The access token used to access resource is wrong
+      summary: Deletes tenant caller is part of, will send verification email before
+        deleting tenant
+      tags:
+      - tenants
+      x-accepts: application/json
+    get:
+      operationId: tenants/get
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+          description: Gives back the tenant call is part of
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: The access token used to access resource is wrong
+      summary: Returns the tenant information the caller is part of
+      tags:
+      - tenants
+      x-accepts: application/json
+    patch:
+      description: This endpoint is used to update certain information about your
+        tenant. For example if you want to update your tenant's callback URL you will
+        do that here.
+      operationId: tenant/update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTenantRequest'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+          description: Successfully updated tenant
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: The access token used to access resource is wrong
+      summary: Updates tenant information
+      tags:
+      - tenants
+      x-contentType: application/json
+      x-accepts: application/json
+    post:
+      operationId: tenants/create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTenantRequest'
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+          description: Returns information about the newly created tenant
+      security: []
+      summary: Creates new tenant
+      tags:
+      - tenants
+      x-contentType: application/json
+      x-accepts: application/json
+  /v1/tenant/activate:
+    post:
+      operationId: tenants/activate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivateTenantRequest'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+          description: Returns tenant information about the newly activated tenant.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: The payload of the request is not valid
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: The access token used to access resource is wrong
+      summary: Activates the tenant, checks that all necessary information to activate
+        a tenant is included
+      tags:
+      - tenants
+      x-contentType: application/json
+      x-accepts: application/json
+  /v1/tenant/cardtoken:
+    get:
+      operationId: tenants/cardtoken
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Returns the token as a string
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: The access token used to access resource is wrong
+      summary: Returns token that is used by stripe to save card number.
+      tags:
+      - internal
+      x-accepts: application/json
+  /v1/tokens:
+    get:
+      operationId: tokens/list
+      parameters:
+      - description: Maximum of results per page
+        in: query
+        name: size
+        schema:
+          maximum: 20
+          minimum: 1
+          type: integer
+      - description: The page you want to see
+        in: query
+        name: page
+        schema:
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenList'
+          description: Returns a paginated list of tokens
+      summary: Returns a list of all active tokens in tenant
+      tags:
+      - tokens
+      x-accepts: application/json
+    post:
+      operationId: tokens/create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTokenRequest'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+          description: Returns the newly created token
+      summary: Creates new token
+      tags:
+      - tokens
+      x-contentType: application/json
+      x-accepts: application/json
+  /v1/tokens/{id}:
+    delete:
+      operationId: tokens/delete
+      parameters:
+      - description: Id of the token you want to delete
+        example: ffd12fb4-da5b-4751-a9f6-d3214b418139
+        in: path
+        name: tokenId
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Successfully deleted specified token
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: The access token used to access resource is wrong
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: token could not be found
+      summary: Deletes specifed access token
+      tags:
+      - tokens
+      x-accepts: application/json
+  /v1/images/totp:
+    get:
+      description: This endpoint does not do any lookups of any sort. It will just
+        generate a QR code from the parameters supplied to it.
+      operationId: images/totp
+      parameters:
+      - description: The company name you your users to see in their TOTP application
+        in: query
+        name: tenantName
+        schema:
+          maximum: 40
+          minimum: 1
+          type: string
+      - description: The userId of the user you want to create the TOTP QR image for
+        in: query
+        name: userId
+        schema:
+          maximum: 128
+          minimum: 1
+          type: string
+      - description: The TOTP secret for the specified user
+        in: query
+        name: userSecret
+        schema:
+          maximum: 128
+          minimum: 1
+          type: string
+      responses:
+        "200":
+          content:
+            image/png:
+              schema:
+                format: binary
+                type: string
+          description: Gives back the QR code as an image
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: The payload of the request is not valid
+      security: []
+      summary: Returns a generated QR code
+      tags:
+      - images
+      x-accepts: application/json
+components:
+  schemas:
+    User:
+      description: Information about a user.
+      example:
+        userId: userId
+        email: email
+      properties:
+        email:
+          format: email
+          type: string
+        userId:
+          maximum: 128
+          minimum: 1
+          type: string
+      required:
+      - userId
+      type: object
+    CreateUserRequest:
+      example:
+        userId: userId
+        email: email
+      properties:
+        email:
+          format: email
+          type: string
+        userId:
+          maximum: 128
+          minimum: 1
+          type: string
+      required:
+      - userId
+      type: object
+    Error:
+      properties:
+        message:
+          type: string
+        errorType:
+          type: string
+      required:
+      - errorType
+      - message
+      type: object
+    UpdateUserRequest:
+      example:
+        email: email
+      properties:
+        email:
+          format: email
+          type: string
+      type: object
+    TotpEnableResponse:
+      description: payload with the secret key and url to QR code image
+      example:
+        secretKey: secretKey
+        qrImage: https://openapi-generator.tech
+      properties:
+        secretKey:
+          format: password
+          type: string
+        qrImage:
+          format: uri
+          type: string
+      required:
+      - qrImage
+      - secretKey
+      type: object
+    TotpEnableRequest:
+      description: request to enable google authenticator method for user
+      example:
+        enable: true
+      properties:
+        enable:
+          type: boolean
+      required:
+      - enable
+      type: object
+    Tenant:
+      description: Tenant is what you can call your account with lagrello. In your
+        tenant you will store all the information about your account and all your
+        users accounts.
+      example:
+        tenantName: tenantName
+        companyInfo:
+          VATNumber: VATNumber
+          Address: Address
+          PostalCode: PostalCode
+          Country: Country
+          City: City
+          OrgNumber: OrgNumber
+          Name: Name
+        tenantId: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        callbackUrl: https://example.com/users/{}
+        activated: true
+      properties:
+        tenantId:
+          format: uuid
+          type: string
+        tenantName:
+          maximum: 128
+          minimum: 1
+          type: string
+        callbackUrl:
+          example: https://example.com/users/{}
+          format: uri
+          type: string
+        companyInfo:
+          $ref: '#/components/schemas/TenantCompanyInfo'
+        activated:
+          type: boolean
+      required:
+      - activated
+      - callbackUrl
+      - companyInfo
+      - tenantId
+      - tenantName
+      type: object
+    TenantCompanyInfo:
+      example:
+        VATNumber: VATNumber
+        Address: Address
+        PostalCode: PostalCode
+        Country: Country
+        City: City
+        OrgNumber: OrgNumber
+        Name: Name
+      properties:
+        Name:
+          description: The full name of your company.
+          type: string
+        Address:
+          description: The first line of the address for your company.
+          type: string
+        City:
+          description: The city in which the address is located.
+          type: string
+        PostalCode:
+          description: The postal code for the address.
+          type: string
+        Country:
+          description: The country in which the address is located. This should be
+            given as an ISO 3361-1 country code (two letter abbreviation).
+          type: string
+        OrgNumber:
+          description: Your company's organization number.
+          type: string
+        VATNumber:
+          description: A value added tax identification number, identifier used in
+            many countries, including the countries of the European Union, for value
+            added tax purposes.
+          type: string
+      required:
+      - Address
+      - City
+      - Country
+      - Name
+      - OrgNumber
+      - PostalCode
+      - VATNumber
+      type: object
+    CreateTenantRequest:
+      example:
+        tenantName: Example Company
+        adminEmail: admin@example.com
+      properties:
+        tenantName:
+          description: The name of the tenant should preferably be the name of your
+            organization/company. Does not need to be but your end users will see
+            this name.
+          example: Example Company
+          maximum: 128
+          minimum: 1
+          type: string
+        adminEmail:
+          description: Email to the person that will be tenant admin.
+          example: admin@example.com
+          format: email
+          type: string
+      required:
+      - adminEmail
+      - tenantName
+      type: object
+    UpdateTenantRequest:
+      example:
+        callbackUrl: https://api.example.com/users/login/{}
+      properties:
+        callbackUrl:
+          description: This callback address will be used when using the email authentication
+            method. When the end user will have this callback address send to them
+            with the authentication key. In the callback address you need to specify
+            where you want to the auth token to be placed. Specify where in the uri
+            you want to accept the auth token that will then be verified with Lagrello.
+            To specify where you will use these two characters {}.
+          example: https://api.example.com/users/login/{}
+          format: uri
+          type: string
+      type: object
+    ActivateTenantRequest:
+      example:
+        companyCity: companyCity
+        companyName: companyName
+        companyAddress: companyAddress
+        companyCountry: companyCountry
+        companyPostalCode: companyPostalCode
+        companyOrgNumber: companyOrgNumber
+        companyVATNumber: companyVATNumber
+      properties:
+        companyName:
+          description: The full name of your company.
+          type: string
+        companyAddress:
+          description: The first line of the address for your company.
+          type: string
+        companyCity:
+          description: The city in which the address is located.
+          type: string
+        companyPostalCode:
+          description: The postal code for the address.
+          type: string
+        companyCountry:
+          description: The country in which the address is located. This should be
+            given as an ISO 3361-1 country code (two letter abbreviation).
+          type: string
+        companyOrgNumber:
+          description: Your company's organization number.
+          type: string
+        companyVATNumber:
+          description: A value added tax identification number, identifier used in
+            many countries, including the countries of the European Union, for value
+            added tax purposes.
+          type: string
+      required:
+      - companyAddress
+      - companyCity
+      - companyCountry
+      - companyName
+      - companyOrgNumber
+      - companyPostalCode
+      - companyVATNumber
+      type: object
+    TokenList:
+      example:
+        data:
+        - createdAt: 2000-01-23T04:56:07.000+00:00
+          tokenKey: 13777603-bdf9-48f7-a493-3b4a94e8be02
+          createdBy: createdBy
+          permissions:
+          - permissions
+          - permissions
+          tokenName: tokenName
+        - createdAt: 2000-01-23T04:56:07.000+00:00
+          tokenKey: 13777603-bdf9-48f7-a493-3b4a94e8be02
+          createdBy: createdBy
+          permissions:
+          - permissions
+          - permissions
+          tokenName: tokenName
+        paging:
+          next: https://openapi-generator.tech
+          previous: https://openapi-generator.tech
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/Token'
+          required:
+          - next
+          - previous
+          type: array
+        paging:
+          $ref: '#/components/schemas/Paging'
+      required:
+      - data
+      - paging
+      type: object
+    Token:
+      description: Access tokens are used when talking to the API, it will confirm
+        your identity.
+      example:
+        createdAt: 2000-01-23T04:56:07.000+00:00
+        tokenKey: 13777603-bdf9-48f7-a493-3b4a94e8be02
+        createdBy: createdBy
+        permissions:
+        - permissions
+        - permissions
+        tokenName: tokenName
+      properties:
+        tokenKey:
+          example: 13777603-bdf9-48f7-a493-3b4a94e8be02
+          format: uuid
+          type: string
+        tokenName:
+          maximum: 128
+          minimum: 1
+          type: string
+        createdBy:
+          type: string
+        createdAt:
+          format: date-time
+          type: string
+        permissions:
+          items:
+            type: string
+          type: array
+      required:
+      - createdAt
+      - createdBy
+      - permissions
+      - tokenKey
+      - tokenName
+      type: object
+    CreateTokenRequest:
+      example:
+        permissions:
+        - permissions
+        - permissions
+        tokenName: tokenName
+      properties:
+        tokenName:
+          maximum: 128
+          minimum: 1
+          type: string
+        permissions:
+          items:
+            description: Specify what permissions you want the token to have your
+              can chose between READ, WRITE and/or ADMIN. To be able to update and
+              create anything the token needs write permissions. If you want to create
+              more tokens you need the ADMIN permission on your token. All tokens
+              created will have at least READ permissions.
+            type: string
+          type: array
+      required:
+      - tokenName
+      type: object
+    Paging:
+      example:
+        next: https://openapi-generator.tech
+        previous: https://openapi-generator.tech
+      properties:
+        previous:
+          format: uri
+          type: string
+        next:
+          format: uri
+          type: string
+      required:
+      - next
+      - previous
+      type: object
+  securitySchemes:
+    token:
+      scheme: bearer
+      type: http
+
